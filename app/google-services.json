@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "129105570023",
+    "firebase_url": "https://historic-ingerland.firebaseio.com",
+    "project_id": "historic-ingerland",
+    "storage_bucket": "historic-ingerland.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:129105570023:android:f3e712a5eda044b7b5da42",
+        "android_client_info": {
+          "package_name": "com.historicingerland.myapplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "129105570023-r3m46fct6ld4ae5fodmo2clibfq6b87d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.historicingerland.myapplication",
+            "certificate_hash": "c42083bb278bbe0cc3361767791df460b61d7956"
+          }
+        },
+        {
+          "client_id": "129105570023-1l0bkrh6atsgpckg42u9f8oggo8nvril.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwdrhSy1PFc4VNftmz4tkJEnMOJxnOOYw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "129105570023-1l0bkrh6atsgpckg42u9f8oggo8nvril.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
