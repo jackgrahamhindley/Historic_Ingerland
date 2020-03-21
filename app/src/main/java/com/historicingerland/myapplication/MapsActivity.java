@@ -62,6 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final float DEFAULT_ZOOM = 10f;
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
     private static final String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
+    private static final String ACCESS_BACKGROUND_LOCATION = Manifest.permission.ACCESS_BACKGROUND_LOCATION;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     private DatabaseReference myLocationRef;
     private GeoFire geoFire;
@@ -74,13 +75,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void getLocationPermission(){
         String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION};
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION};
 
         if(ContextCompat.checkSelfPermission(this.getApplicationContext(),
                 FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
                     COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                mLocationPermissionGranted = true;
+                if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                        ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+
+                    mLocationPermissionGranted = true;
+                } else {
+                    ActivityCompat.requestPermissions(this,
+                            permissions,
+                            LOCATION_PERMISSION_REQUEST_CODE);
+                }
+
+
             } else {
                 ActivityCompat.requestPermissions(this,
                         permissions,
@@ -392,27 +405,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.addMarker(new MarkerOptions().position(new LatLng(50.37027359, -4.66753139)).title("Battle of Lostwithiel 31 August - 1 September 1644").snippet("https://historicengland.org.uk/listing/the-list/list-entry/1413762"));
         mMap.addMarker(new MarkerOptions().position(new LatLng(52.11788515, -1.2487676)).title("Battle of Edgcote 1469").snippet("https://historicengland.org.uk/listing/the-list/list-entry/1413782").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
 
-        Dexter.withActivity(this)
-                .withPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                .withListener(new PermissionListener() {
-                    @Override
-                    public void onPermissionGranted(PermissionGrantedResponse response) {
-                        buildLocationRequest();
 
-
-                    }
-
-                    @Override
-                    public void onPermissionDenied(PermissionDeniedResponse response) {
-                        Toast.makeText(MapsActivity.this, "You must enable permission in order to receive notifications", Toast.LENGTH_SHORT).show();
-
-                    }
-
-                    @Override
-                    public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
-
-                    }
-                }).check();
 
         initArea();
 
@@ -433,14 +426,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    private void buildLocationRequest() {
-        locationRequest = new LocationRequest();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(5000);
-        locationRequest.setFastestInterval(3000);
-        locationRequest.setSmallestDisplacement(10f);
 
-    }
 
     private void settingGeoFire() {
         myLocationRef = FirebaseDatabase.getInstance().getReference("MyLocation");
@@ -450,13 +436,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    private void addGeoFence(double latitude, double longitude, float radius,
-                          String requestId, String broadcastUri){
-        Geofence.Builder builder = new Geofence.Builder()
-                .setRequestId(requestId)
-                .setCircularRegion(latitude, longitude, radius)
-                .setExpirationDuration(60 * 60 * 1000)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER);};
+
 
 
 
