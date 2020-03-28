@@ -17,6 +17,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -52,62 +53,90 @@ import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.single.PermissionListener;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+
+import static java.util.Locale.filter;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener, GeoQueryEventListener {
 
     private GoogleMap mMap;
-    private static final String TAG = "MapsActivity";
+    private static final String TAG = MapsActivity.class.getSimpleName();
     private static final float DEFAULT_ZOOM = 10f;
-    private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
-    private static final String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
-    private static final String ACCESS_BACKGROUND_LOCATION = Manifest.permission.ACCESS_BACKGROUND_LOCATION;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     private DatabaseReference myLocationRef;
     private GeoFire geoFire;
     private List<LatLng> battlesite;
     private LocationRequest locationRequest;
 
+    private Boolean FINE_LOCATION_GRANTED;
+    private Boolean COARSE_LOCATION_GRANTED;
+    private Boolean BACKGROUND_LOCATION_GRANTED;
 
     // vars
     private Boolean mLocationPermissionGranted = false;
 
-    private void getLocationPermission(){
-        String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
+    private void getLocationPermission() {
+        String[] permissions = {
+                Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION};
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        };
 
-        if(ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                    COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                        ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        Log.d(TAG, "MA_APP STARTED");
 
+        Context context = this.getApplicationContext();
+        int granted = PackageManager.PERMISSION_GRANTED;
+        List<String> deniedPermissions =
+                Arrays.asList(Arrays.stream(permissions)
+                        .filter(p -> ContextCompat.checkSelfPermission(context, p) != granted)
+                        .toArray(size -> new String[size]));
 
-                    mLocationPermissionGranted = true;
-                } else {
-                    ActivityCompat.requestPermissions(this,
-                            permissions,
-                            LOCATION_PERMISSION_REQUEST_CODE);
-                }
+        String debugLogMessage = "MA_denied permissions: " + String.join(", ", deniedPermissions);
+        Log.d(TAG, debugLogMessage);
 
-
-            } else {
-                ActivityCompat.requestPermissions(this,
-                        permissions,
-                        LOCATION_PERMISSION_REQUEST_CODE);
-            }
-        }else{
+        if (deniedPermissions.size() > 0) {
             ActivityCompat.requestPermissions(this,
-                    permissions,
-                    LOCATION_PERMISSION_REQUEST_CODE);
+                    (String[]) deniedPermissions.toArray(),
+                    getLocationRequestCode(deniedPermissions));
+        } else {
+            mLocationPermissionGranted = true;
         }
     }
 
+    private int getLocationRequestCode(List<String> deniedPermissions) {
+        int result = 0;
+        if (deniedPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            result += 1;
+        }
+        if (deniedPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            result += 10;
+        }
+        if (deniedPermissions.contains(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+            result += 100;
+        }
 
+        Log.d(TAG, "MA_permissions CODE: " + result);
+        return result;
+    }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions , @NonNull int[] grantResults) {
+        Log.d(TAG, "onRequestPermissionsResult: called.");
+        mLocationPermissionGranted = false;
+
+        char[] requestCodeString = String.format("%03d%n", requestCode).toCharArray();
+        FINE_LOCATION_GRANTED = requestCodeString[0] == '1';
+        COARSE_LOCATION_GRANTED = requestCodeString[1] == '1';
+        BACKGROUND_LOCATION_GRANTED = requestCodeString[2] == '1';
+
+        Log.d(TAG, "MA_permissions FINE: " + FINE_LOCATION_GRANTED);
+        Log.d(TAG, "MA_permissions COARSE: " + COARSE_LOCATION_GRANTED);
+        Log.d(TAG, "MA_permissions BACKGROUND: " + BACKGROUND_LOCATION_GRANTED);
+
+        mLocationPermissionGranted = FINE_LOCATION_GRANTED || COARSE_LOCATION_GRANTED || BACKGROUND_LOCATION_GRANTED;
+    }
 
     private void initArea() {
         battlesite = new ArrayList<>();
@@ -175,33 +204,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
+        Log.d(TAG, "MA_attempting location permission" );
         getLocationPermission();
-
     }
-
-
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions , @NonNull int[] grantResults) {
-        Log.d(TAG, "onRequestPermissionsResult: called.");
-        mLocationPermissionGranted = false;
-
-        switch (requestCode) {
-            case LOCATION_PERMISSION_REQUEST_CODE: {
-                if (grantResults.length > 0) {
-                    for (int i = 0; i < grantResults.length; i++) {
-                        if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                            mLocationPermissionGranted = false;
-                            return;
-                        }
-                    }
-                    mLocationPermissionGranted = true;
-
-                }
-            }
-        }
-    }
-
 
     private void getDeviceLocation(){
         Log.d(TAG, "getDeviceLocation: getting the current device location" );
@@ -217,7 +222,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             Location currentLocation = (Location) task.getResult();
                             moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()),
                                     DEFAULT_ZOOM);
-                            geoFire.setLocation("You", new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()));
+                            geoFire.setLocation("Stefan", new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()));
 
                         }else{
                             Log.d(TAG,"on completion: current location is null");
@@ -247,6 +252,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        Log.d(TAG, "MA_loading onMapReady" );
 
         mMap = googleMap;
 
@@ -255,7 +261,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mLocationPermissionGranted) {
             getDeviceLocation();
             mMap.setMyLocationEnabled(true);
-
         }
 
         mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapsActivity.this));
@@ -429,18 +434,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     private void settingGeoFire() {
-        myLocationRef = FirebaseDatabase.getInstance().getReference("MyLocation");
+        FirebaseDatabase firebaseDb = FirebaseDatabase.getInstance("https://historic-ingerland.firebaseio.com");
+        myLocationRef = firebaseDb.getReference("MyLocation/Stefan");
         geoFire = new GeoFire(myLocationRef);
     }
-
-
-
-
-
-
-
-
-
 
     @Override
     public void onInfoWindowClick(Marker marker) {
